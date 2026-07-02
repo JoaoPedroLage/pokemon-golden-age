@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:15-alpine # Versão travada e imagem otimizada
     container_name: postgres-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-your_username}
@@ -9,16 +9,16 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql
+      # Mapeamento correto para a pasta de dados real
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-your_username} -d ${POSTGRES_DB:-pokemon_golden_age}"]
-      interval: 3s
+      interval: 5s
       timeout: 5s
-      retries: 15
-      start_period: 15s
-    # env_file é opcional - se .env não existir, use as variáveis padrão acima
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -27,13 +27,12 @@ services:
     container_name: backend-api
     ports:
       - "3001:3001"
-      - "5555:5555"  # Prisma Studio
+      # Porta 5555 removida. Levante o Prisma Studio localmente apontando para o DB.
     environment:
       PORT: 3001
-      POSTGRES_USER: ${POSTGRES_USER:-your_username}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password}
-      POSTGRES_DB: ${POSTGRES_DB:-pokemon_golden_age}
-      DATABASE_URL: ${DATABASE_URL:-}
+      # A URL é montada internamente de forma robusta, conectando os serviços.
+      # O backend sempre saberá encontrar o banco usando o nome do container 'postgres'.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-your_username}:${POSTGRES_PASSWORD:-your_password}@postgres:5432/${POSTGRES_DB:-pokemon_golden_age}?schema=public
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     depends_on:
